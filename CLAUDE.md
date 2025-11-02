@@ -4,6 +4,12 @@
 **Project**: RunPod Serverless Worker for Wan2.2 14B Image-to-Video Lightning Model
 **Status**: ✅ Implementation Complete - Ready for Deployment
 
+**Architecture Update (2025-11-02)**:
+- Changed from network volume approach (`/runpod-volume/models/`) to self-contained Docker image
+- Models now downloaded during Docker build and stored in `/ComfyUI/models/`
+- Removed dependency on RunPod network volumes for simplified deployment
+- Updated paths from `/comfyui` to `/ComfyUI` to match standard conventions
+
 ---
 
 ## High-Level Development Timeline
@@ -182,12 +188,13 @@ This project implements a production-ready RunPod serverless worker that convert
 1. **Base Template**: Built on the official 2025 ComfyUI Wan2.2 template from https://docs.comfy.org/tutorials/video/wan/wan2_2
 2. **Language**: Full English implementation (except model-optimized Chinese negative prompt)
 3. **Storage Strategy**:
-   - `/tmp/` for ephemeral input/output files (fast local NVMe)
-   - `/runpod-volume/models/` for persistent model storage (network volume)
+   - `/tmp/` for ephemeral input/output files (fast local storage)
+   - `/ComfyUI/models/` for models baked into Docker image (self-contained, no network volume required)
 4. **Workflow Optimization**: Uses only the 4-step LoRA path for ~90% faster inference
 5. **Seed Management**: Omitted user seed input - full randomization via ComfyUI
 6. **Input Flexibility**: Supports both image URL and Base64 encoding
 7. **Output Format**: Base64-encoded video for easy API integration
+8. **Deployment Model**: Self-contained Docker image with models downloaded during build (~30GB total)
 
 ---
 
@@ -196,7 +203,7 @@ This project implements a production-ready RunPod serverless worker that convert
 ### File Structure
 
 ```
-wan2.2_14b_i2v_lightning_runpod_worker/
+wan2.2_14b_i2v_4step_runpod_worker/
 ├── src/
 │   ├── rp_handler.py          # Main RunPod serverless handler
 │   ├── comfy_runner.py        # ComfyUI workflow executor via HTTP API
@@ -204,16 +211,13 @@ wan2.2_14b_i2v_lightning_runpod_worker/
 │   └── utils.py               # Image/video encoding, file operations
 ├── workflows/
 │   └── wan22_14B_i2v_lightning.json  # Optimized workflow (cleaned)
-├── models/
-│   └── extra_model_paths.yaml # ComfyUI model path configuration
 ├── tests/
 │   └── test_input.json        # Sample API request
-├── builder/
-│   └── download_models.sh     # Model download script for network volume
-├── Dockerfile                  # Multi-stage build with ComfyUI
+├── Dockerfile                  # Multi-stage build with ComfyUI + model downloads
 ├── entrypoint.sh              # Startup script (ComfyUI + handler)
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # Complete documentation
+├── CLAUDE.md                  # Development history and architecture
 ├── .gitignore
 └── .dockerignore
 ```
@@ -319,12 +323,12 @@ Node 108 (SaveVideo):          widgets_values[0] = output_filename
 ## Model Requirements
 
 **Total Size**: ~30GB
-**Location**: `/runpod-volume/models/`
+**Location**: `/ComfyUI/models/` (downloaded during Docker build)
 
 ### Required Files
 
 ```
-/runpod-volume/models/
+/ComfyUI/models/
 ├── diffusion_models/
 │   ├── wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors  (~14GB)
 │   └── wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors   (~14GB)
@@ -337,7 +341,7 @@ Node 108 (SaveVideo):          widgets_values[0] = output_filename
     └── wan_2.1_vae.safetensors
 ```
 
-**Download Script**: `builder/download_models.sh`
+**Download Method**: Automated via Dockerfile RUN commands using wget from Hugging Face
 
 ---
 
@@ -402,26 +406,23 @@ Node 108 (SaveVideo):          widgets_values[0] = output_filename
 **Base Image**: `runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04`
 
 **Key Steps**:
-1. Install system deps (git, ffmpeg, libgl1-mesa-glx)
-2. Clone and install ComfyUI to `/comfyui`
-3. Install worker dependencies from `requirements.txt`
-4. Copy application code to `/app`
-5. Create model symlinks (handled by entrypoint)
-6. CMD: Start ComfyUI server → sleep 10 → start handler
+1. Install system deps (git, wget, curl, ffmpeg, libgl1-mesa-glx)
+2. Clone and install ComfyUI to `/ComfyUI`
+3. Download all 6 model files (~30GB) to `/ComfyUI/models/` subdirectories
+4. Install worker dependencies from `requirements.txt`
+5. Copy application code to `/app` and entrypoint script
+6. CMD: Execute `/entrypoint.sh`
 
 **Environment Variables**:
 - `COMFYUI_SERVER=127.0.0.1:8188`
-- `MODEL_PATH=/runpod-volume/models`
 
 ### entrypoint.sh
 
 **Startup Sequence**:
-1. Check `/runpod-volume/models/` exists
-2. Verify all 6 model files present (warns if missing)
-3. Create symlinks: `/runpod-volume/models/*` → `/comfyui/models/*`
-4. Start ComfyUI server in background
-5. Wait for ComfyUI readiness (curl health check, max 60s)
-6. Start RunPod handler
+1. Verify all 6 model files exist in `/ComfyUI/models/` subdirectories (exits on error)
+2. Start ComfyUI server in background
+3. Wait for ComfyUI readiness (curl health check, max 60s)
+4. Start RunPod handler
 
 **Health Check**: `curl -f http://localhost:8188/`
 
@@ -429,11 +430,12 @@ Node 108 (SaveVideo):          widgets_values[0] = output_filename
 
 **Endpoint Settings**:
 - **GPU**: RTX 4090 / A40 / A100 (24GB+ VRAM required)
-- **Network Volume**: Mount at `/runpod-volume`
-- **Container Disk**: 20GB minimum
+- **Container Disk**: 50GB minimum (to accommodate ~30GB models baked into image)
 - **Max Workers**: 3-5 (budget dependent)
 - **Idle Timeout**: 60 seconds
 - **Execution Timeout**: 600 seconds (10 minutes)
+
+**Note**: No network volume required - models are self-contained in Docker image
 
 ---
 

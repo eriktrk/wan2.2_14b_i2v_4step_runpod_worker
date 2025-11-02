@@ -11,7 +11,7 @@ A RunPod serverless worker for generating videos from static images using the Wa
 - **Fast Generation**: 4-step Lightning LoRA for ~90% faster inference (~30-40s for 512x512x33)
 - **Flexible Input**: Accepts images via URL or Base64 encoding
 - **Base64 Output**: Returns generated videos as Base64-encoded strings
-- **Optimized for RunPod**: Network volume support, /tmp storage for I/O
+- **Self-Contained**: Models baked into Docker image, no external volumes required
 - **Production Ready**: Full error handling, validation, and logging
 - **Game Asset Animation**: Specialized for 2D character idle animations, attack animations, and sprite sheets
 
@@ -21,24 +21,17 @@ A RunPod serverless worker for generating videos from static images using the Wa
 - NVIDIA GPU with 24GB+ VRAM (RTX 4090, A40, A100)
 - CUDA 11.8+
 
-### Models (stored on RunPod Network Volume)
-Download these models to `/runpod-volume/models/`:
+### Models
+Models are automatically downloaded during Docker image build (~30GB total) and stored in `/ComfyUI/models/`:
 
-```
-/runpod-volume/models/
-├── diffusion_models/
-│   ├── wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors
-│   └── wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors
-├── loras/
-│   ├── wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
-│   └── wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors
-├── text_encoders/
-│   └── umt5_xxl_fp8_e4m3fn_scaled.safetensors
-└── vae/
-    └── wan_2.1_vae.safetensors
-```
+- Diffusion models: wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors (~14GB)
+- Diffusion models: wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors (~14GB)
+- LoRA models: wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
+- LoRA models: wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors
+- Text encoder: umt5_xxl_fp8_e4m3fn_scaled.safetensors
+- VAE: wan_2.1_vae.safetensors
 
-**Download links**: See `workflows/wan22_14B_i2v_lightning.json` metadata or [Hugging Face](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged)
+**Source**: [Hugging Face - Comfy-Org/Wan_2.2_ComfyUI_Repackaged](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged)
 
 ## API Reference
 
@@ -106,34 +99,28 @@ Download these models to `/runpod-volume/models/`:
 
 ### 1. Build Docker Image
 
+**Note**: Building will download ~30GB of models. Ensure sufficient bandwidth and disk space.
+
 ```bash
 docker build --platform linux/amd64 -t your-dockerhub/wan22-i2v-worker:latest .
 docker push your-dockerhub/wan22-i2v-worker:latest
 ```
 
-### 2. Set Up Network Volume
-
-1. Create a Network Volume in RunPod console
-2. Download models to `/runpod-volume/models/` (see structure above)
-3. Verify all 6 required model files are present
-
-### 3. Create Serverless Endpoint
+### 2. Create Serverless Endpoint
 
 **RunPod Console Settings:**
 - **Container Image**: `your-dockerhub/wan22-i2v-worker:latest`
 - **GPU Type**: RTX 4090 / A40 / A100 (24GB+ VRAM)
-- **Network Volume**: Attach your volume to `/runpod-volume`
-- **Container Disk**: 20GB
+- **Container Disk**: 50GB minimum (to accommodate ~30GB models)
 - **Environment Variables**:
   - `COMFYUI_SERVER=127.0.0.1:8188`
-  - `MODEL_PATH=/runpod-volume/models`
 
 **Advanced Settings:**
 - Max Workers: 3-5 (based on budget)
 - Idle Timeout: 60 seconds
 - Execution Timeout: 600 seconds
 
-### 4. Test Endpoint
+### 3. Test Endpoint
 
 ```bash
 curl -X POST https://api.runpod.ai/v2/{endpoint_id}/run \
@@ -167,30 +154,50 @@ curl -X POST https://api.runpod.ai/v2/{endpoint_id}/run \
 ### Prerequisites
 - Python 3.10+
 - CUDA 11.8+
-- ComfyUI installed at `/comfyui`
+- Docker (recommended) OR ComfyUI installed locally
 
-### Setup
+### Setup with Docker
 
 ```bash
 # Clone repository
-git clone https://github.com/your-repo/wan22-i2v-worker.git
-cd wan22-i2v-worker
+git clone https://github.com/eriktrk/wan2.2_14b_i2v_4step_runpod_worker.git
+cd wan2.2_14b_i2v_4step_runpod_worker
 
-# Install dependencies
+# Build Docker image (downloads models automatically)
+docker build -t wan22-i2v-worker:local .
+
+# Run locally
+docker run --gpus all -p 8188:8188 wan22-i2v-worker:local
+```
+
+### Setup without Docker
+
+```bash
+# Install ComfyUI
+git clone https://github.com/comfyanonymous/ComfyUI.git /ComfyUI
+cd /ComfyUI
+pip install -r requirements.txt
+
+# Download models manually to /ComfyUI/models/
+# (See Dockerfile for wget commands)
+
+# Install worker dependencies
+cd /path/to/wan2.2_14b_i2v_4step_runpod_worker
 pip install -r requirements.txt
 
 # Start ComfyUI server
-cd /comfyui
+cd /ComfyUI
 python main.py --listen 0.0.0.0 --port 8188 &
 
-# Run handler locally (simulated mode)
-python src/rp_handler.py --local --input tests/test_input.json
+# Run handler
+cd /path/to/wan2.2_14b_i2v_4step_runpod_worker
+python src/rp_handler.py
 ```
 
 ## File Structure
 
 ```
-wan2.2_14b_i2v_lightning_runpod_worker/
+wan2.2_14b_i2v_4step_runpod_worker/
 ├── src/
 │   ├── rp_handler.py          # Main RunPod handler
 │   ├── comfy_runner.py        # ComfyUI workflow executor
@@ -200,7 +207,7 @@ wan2.2_14b_i2v_lightning_runpod_worker/
 │   └── wan22_14B_i2v_lightning.json  # Optimized workflow
 ├── tests/
 │   └── test_input.json        # Sample test input
-├── Dockerfile                  # Container configuration
+├── Dockerfile                  # Container configuration (includes model downloads)
 ├── entrypoint.sh              # Startup script
 ├── requirements.txt           # Python dependencies
 └── README.md
@@ -209,9 +216,10 @@ wan2.2_14b_i2v_lightning_runpod_worker/
 ## Troubleshooting
 
 ### "Model not found" errors
-- Verify network volume is mounted at `/runpod-volume`
-- Check all 6 model files are present in correct subdirectories
+- Verify models were downloaded during Docker build
+- Check all 6 model files exist in `/ComfyUI/models/` subdirectories
 - Ensure model filenames match exactly (case-sensitive)
+- Review Docker build logs for download failures
 
 ### ComfyUI fails to start
 - Check logs: `docker logs <container_id>`
