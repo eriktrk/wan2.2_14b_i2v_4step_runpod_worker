@@ -1,0 +1,5 @@
+# RunPod Worker Dependencies
+runpod>=1.6.0
+requests>=2.31.0
+pillow>=10.0.0
+websocket-client>=1.6.0
