@@ -59,10 +59,10 @@ class ComfyUIRunner:
         steps: int
     ) -> Dict[str, Any]:
         """
-        Inject dynamic parameters into workflow.
+        Inject dynamic parameters into workflow (API format).
 
         Args:
-            workflow: Original workflow dict
+            workflow: Original workflow dict (API format with node IDs as keys)
             prompt: Positive prompt
             negative_prompt: Negative prompt
             input_image_path: Path to input image
@@ -75,52 +75,47 @@ class ComfyUIRunner:
             steps: Sampling steps
 
         Returns:
-            Modified workflow dict
+            Modified workflow dict in API format
         """
         # Create a deep copy to avoid modifying original
         workflow = json.loads(json.dumps(workflow))
 
-        # Find nodes by ID
-        nodes = {node['id']: node for node in workflow['nodes']}
+        # Node 137: LoadImage - Input image filename
+        if "137" in workflow:
+            workflow["137"]["inputs"]["image"] = os.path.basename(input_image_path)
 
-        # Node 137: LoadImage - Input image path
-        if 137 in nodes:
-            nodes[137]['widgets_values'][0] = os.path.basename(input_image_path)
+        # Node 93: CLIPTextEncode (Positive prompt)
+        if "93" in workflow:
+            workflow["93"]["inputs"]["text"] = prompt
 
-        # Node 93: Positive prompt
-        if 93 in nodes:
-            nodes[93]['widgets_values'][0] = prompt
+        # Node 89: CLIPTextEncode (Negative prompt)
+        if "89" in workflow:
+            workflow["89"]["inputs"]["text"] = negative_prompt
 
-        # Node 89: Negative prompt
-        if 89 in nodes:
-            nodes[89]['widgets_values'][0] = negative_prompt
-
-        # Node 98: WanImageToVideo - Dimensions
-        if 98 in nodes:
-            nodes[98]['widgets_values'] = [width, height, frames, 1]
+        # Node 98: WanImageToVideo - Dimensions and frames
+        if "98" in workflow:
+            workflow["98"]["inputs"]["width"] = width
+            workflow["98"]["inputs"]["height"] = height
+            workflow["98"]["inputs"]["length"] = frames
 
         # Node 86: KSamplerAdvanced (High Noise) - Steps & CFG
-        if 86 in nodes:
-            nodes[86]['widgets_values'][3] = steps  # steps
-            nodes[86]['widgets_values'][4] = cfg    # cfg_scale
+        if "86" in workflow:
+            workflow["86"]["inputs"]["steps"] = steps
+            workflow["86"]["inputs"]["cfg"] = cfg
 
         # Node 85: KSamplerAdvanced (Low Noise) - Steps & CFG
-        if 85 in nodes:
-            nodes[85]['widgets_values'][3] = steps  # steps
-            nodes[85]['widgets_values'][4] = cfg    # cfg_scale
+        if "85" in workflow:
+            workflow["85"]["inputs"]["steps"] = steps
+            workflow["85"]["inputs"]["cfg"] = cfg
 
         # Node 94: CreateVideo - FPS
-        if 94 in nodes:
-            nodes[94]['widgets_values'][0] = fps
+        if "94" in workflow:
+            workflow["94"]["inputs"]["fps"] = fps
 
-        # Node 108: SaveVideo - Output path
-        if 108 in nodes:
-            # Extract just the directory and filename prefix
-            output_dir = os.path.dirname(output_video_path)
-            output_filename = os.path.basename(output_video_path)
-            # Remove extension if present
-            output_filename = os.path.splitext(output_filename)[0]
-            nodes[108]['widgets_values'][0] = output_filename
+        # Node 108: SaveVideo - Output filename prefix
+        if "108" in workflow:
+            output_filename = os.path.splitext(os.path.basename(output_video_path))[0]
+            workflow["108"]["inputs"]["filename_prefix"] = output_filename
 
         return workflow
 
