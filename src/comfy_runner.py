@@ -220,26 +220,45 @@ class ComfyUIRunner:
         # Node 108 (SaveVideo) produces the output
         outputs = history.get('outputs', {})
 
+        # Debug: Print what we got
+        print(f"DEBUG: History outputs keys: {list(outputs.keys())}")
+        if '108' in outputs:
+            print(f"DEBUG: Node 108 output: {json.dumps(outputs['108'], indent=2)}")
+
         # Look for SaveVideo output (Node 108)
         if '108' in outputs:
             node_output = outputs['108']
-            if 'gifs' in node_output and len(node_output['gifs']) > 0:
-                # ComfyUI saves videos to /ComfyUI/output/ by default
-                video_info = node_output['gifs'][0]
-                filename = video_info['filename']
-                subfolder = video_info.get('subfolder', '')
 
-                # Construct full path - ComfyUI output directory
-                comfyui_output_dir = "/ComfyUI/output"
-                if subfolder:
-                    output_path = os.path.join(comfyui_output_dir, subfolder, filename)
-                else:
-                    output_path = os.path.join(comfyui_output_dir, filename)
+            # SaveVideo might use 'gifs', 'videos', or 'images' key
+            for key in ['videos', 'gifs', 'images']:
+                if key in node_output and len(node_output[key]) > 0:
+                    video_info = node_output[key][0]
+                    filename = video_info['filename']
+                    subfolder = video_info.get('subfolder', '')
 
-                if os.path.exists(output_path):
-                    return output_path
+                    print(f"DEBUG: Found video in '{key}' - filename: {filename}, subfolder: {subfolder}")
 
-        raise ComfyUIError("Output video not found in execution history")
+                    # Construct full path - ComfyUI output directory
+                    comfyui_output_dir = "/ComfyUI/output"
+                    if subfolder:
+                        output_path = os.path.join(comfyui_output_dir, subfolder, filename)
+                    else:
+                        output_path = os.path.join(comfyui_output_dir, filename)
+
+                    print(f"DEBUG: Checking path: {output_path}")
+                    if os.path.exists(output_path):
+                        print(f"DEBUG: Found video at: {output_path}")
+                        return output_path
+                    else:
+                        print(f"DEBUG: Path does not exist: {output_path}")
+                        # List what's actually in the output directory
+                        if os.path.exists(comfyui_output_dir):
+                            print(f"DEBUG: Contents of {comfyui_output_dir}:")
+                            for root, dirs, files in os.walk(comfyui_output_dir):
+                                for f in files:
+                                    print(f"  - {os.path.join(root, f)}")
+
+        raise ComfyUIError(f"Output video not found in execution history. Outputs: {json.dumps(outputs, indent=2)}")
 
     def upload_image(self, image_path: str) -> str:
         """
