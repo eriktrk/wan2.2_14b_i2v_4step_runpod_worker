@@ -6,9 +6,9 @@ import json
 import os
 import time
 import uuid
-import websocket
 import urllib.request
 import urllib.parse
+import shutil
 from typing import Dict, Any, Optional
 
 
@@ -82,7 +82,7 @@ class ComfyUIRunner:
 
         # Node 137: LoadImage - Input image filename
         if "137" in workflow:
-            workflow["137"]["inputs"]["image"] = os.path.basename(input_image_path)
+            workflow["137"]["inputs"]["image"] = input_image_path
 
         # Node 93: CLIPTextEncode (Positive prompt)
         if "93" in workflow:
@@ -204,13 +204,12 @@ class ComfyUIRunner:
 
         raise ComfyUIError(f"Execution timed out after {timeout} seconds")
 
-    def get_output_path(self, history: Dict[str, Any], output_dir: str = "/tmp") -> str:
+    def get_output_path(self, history: Dict[str, Any]) -> str:
         """
         Extract output video path from execution history.
 
         Args:
             history: Execution history
-            output_dir: Expected output directory
 
         Returns:
             Path to generated video
@@ -225,21 +224,53 @@ class ComfyUIRunner:
         if '108' in outputs:
             node_output = outputs['108']
             if 'gifs' in node_output and len(node_output['gifs']) > 0:
-                # ComfyUI may save as .mp4 or .gif - check both
+                # ComfyUI saves videos to /ComfyUI/output/ by default
                 video_info = node_output['gifs'][0]
                 filename = video_info['filename']
                 subfolder = video_info.get('subfolder', '')
 
-                # Construct full path
+                # Construct full path - ComfyUI output directory
+                comfyui_output_dir = "/ComfyUI/output"
                 if subfolder:
-                    output_path = os.path.join(output_dir, subfolder, filename)
+                    output_path = os.path.join(comfyui_output_dir, subfolder, filename)
                 else:
-                    output_path = os.path.join(output_dir, filename)
+                    output_path = os.path.join(comfyui_output_dir, filename)
 
                 if os.path.exists(output_path):
                     return output_path
 
         raise ComfyUIError("Output video not found in execution history")
+
+    def upload_image(self, image_path: str) -> str:
+        """
+        Upload image to ComfyUI input directory.
+
+        Args:
+            image_path: Path to local image file
+
+        Returns:
+            Filename in ComfyUI input directory
+
+        Raises:
+            ComfyUIError: If upload fails
+        """
+        # ComfyUI expects images in /ComfyUI/input/
+        comfyui_input_dir = "/ComfyUI/input"
+
+        # Create input directory if it doesn't exist
+        os.makedirs(comfyui_input_dir, exist_ok=True)
+
+        # Get just the filename
+        filename = os.path.basename(image_path)
+        dest_path = os.path.join(comfyui_input_dir, filename)
+
+        # Copy image to ComfyUI input directory
+        try:
+            shutil.copy2(image_path, dest_path)
+            print(f"Uploaded image to ComfyUI: {dest_path}")
+            return filename
+        except Exception as e:
+            raise ComfyUIError(f"Failed to upload image: {e}")
 
     def run_workflow(
         self,
@@ -275,13 +306,18 @@ class ComfyUIRunner:
         Raises:
             ComfyUIError: If execution fails
         """
+        # Upload image to ComfyUI input directory
+        uploaded_filename = self.upload_image(input_image_path)
+
         # Load and modify workflow
         workflow = self.load_workflow()
+
+        # Update input_image_path to use the uploaded filename
         workflow = self.inject_parameters(
             workflow=workflow,
             prompt=prompt,
             negative_prompt=negative_prompt,
-            input_image_path=input_image_path,
+            input_image_path=uploaded_filename,  # Use just the filename
             output_video_path=output_video_path,
             width=width,
             height=height,
@@ -300,7 +336,7 @@ class ComfyUIRunner:
         print(f"Execution completed: {prompt_id}")
 
         # Get output path
-        output_path = self.get_output_path(history, os.path.dirname(output_video_path))
+        output_path = self.get_output_path(history)
         print(f"Output video: {output_path}")
 
         return output_path
