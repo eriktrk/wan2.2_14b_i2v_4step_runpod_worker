@@ -85,7 +85,7 @@
     - Implemented `validate_input()` with full parameter checking:
       - Prompt: 1-1000 chars, required
       - Image: exactly one of URL or base64
-      - Dimensions: 256-1024, multiples of 64
+      - Dimensions: 64-1024, multiples of 64
       - Frames: 9-121, must be 8n+1 format
       - CFG: 0.1-20.0
       - Steps: 1-50
@@ -288,7 +288,7 @@ Node 108 (SaveVideo):          widgets_values[0] = output_filename
   静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走
   ```
 - **cfg**: 0.1-20.0 (default: 1.0)
-- **width/height**: 256-1024, must be multiple of 64 (default: 512)
+- **width/height**: 64-1024, must be multiple of 64 (default: 512)
 - **frames**: 9-121, must be 8n+1 (9, 17, 25, 33, 41, 49, 57, 65, 73, 81...)
 - **fps**: 8-60 (default: 16)
 - **steps**: 1-50 (default: 4, optimal for LoRA)

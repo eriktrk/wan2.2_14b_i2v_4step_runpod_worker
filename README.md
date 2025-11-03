@@ -65,8 +65,8 @@ Models are automatically downloaded during Docker image build (~30GB total) and 
 | `image_base64` | string | null | Base64 string | Input image as Base64 |
 | `negative_prompt` | string | Chinese default | 1-1000 chars | Negative prompt (defaults to model-optimized Chinese) |
 | `cfg` | float | 1.0 | 0.1-20.0 | CFG scale (guidance strength) |
-| `width` | int | 512 | 256-1024 (×64) | Video width (must be multiple of 64) |
-| `height` | int | 512 | 256-1024 (×64) | Video height (must be multiple of 64) |
+| `width` | int | 512 | 64-1024 (×64) | Video width (must be multiple of 64) |
+| `height` | int | 512 | 64-1024 (×64) | Video height (must be multiple of 64) |
 | `frames` | int | 33 | 9-121 (8n+1) | Number of frames (must be 8n+1: 9, 17, 25, 33, 41...) |
 | `fps` | int | 16 | 8-60 | Frames per second |
 | `steps` | int | 4 | 1-50 | Sampling steps (4 recommended for LoRA) |

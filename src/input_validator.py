@@ -75,8 +75,8 @@ def validate_input(job_input: Dict[str, Any]) -> Dict[str, Any]:
     width = job_input.get('width', 512)
     try:
         width = int(width)
-        if width < 256 or width > 1024:
-            raise ValidationError("'width' must be between 256 and 1024")
+        if width < 64 or width > 1024:
+            raise ValidationError("'width' must be between 64 and 1024")
         if width % 64 != 0:
             raise ValidationError("'width' must be a multiple of 64")
     except (TypeError, ValueError):
@@ -87,8 +87,8 @@ def validate_input(job_input: Dict[str, Any]) -> Dict[str, Any]:
     height = job_input.get('height', 512)
     try:
         height = int(height)
-        if height < 256 or height > 1024:
-            raise ValidationError("'height' must be between 256 and 1024")
+        if height < 64 or height > 1024:
+            raise ValidationError("'height' must be between 64 and 1024")
         if height % 64 != 0:
             raise ValidationError("'height' must be a multiple of 64")
     except (TypeError, ValueError):
