@@ -1,0 +1,12 @@
+{
+  "input": {
+    "prompt": "A dynamic character animation with smooth motion, shifting weight from one foot to the other in an idle stance",
+    "image_url": "https://example.com/character.png",
+    "cfg": 1.0,
+    "width": 512,
+    "height": 512,
+    "frames": 33,
+    "fps": 16,
+    "steps": 4
+  }
+}

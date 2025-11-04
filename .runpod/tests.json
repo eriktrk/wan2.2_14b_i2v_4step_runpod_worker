@@ -1,0 +1,52 @@
+{
+  "tests": [
+    {
+      "name": "basic_video_generation",
+      "input": {
+        "prompt": "A dynamic character animation with smooth motion, bending left and right, touching left toes and then right toes",
+        "image_url": "https://github.com/runpod-workers/sample-inputs/blob/main/images/yoga.jpg",
+        "cfg": 1.0,
+        "width": 512,
+        "height": 512,
+        "frames": 33,
+        "fps": 16,
+        "steps": 4
+      },
+      "timeout": 300000
+    },
+    {
+      "name": "high_resolution",
+      "input": {
+        "prompt": "Detailed character animation with subtle breathing motion",
+        "image_url": "https://github.com/runpod-workers/sample-inputs/blob/main/images/yoga.jpg",
+        "cfg": 1.5,
+        "width": 640,
+        "height": 640,
+        "frames": 81,
+        "fps": 24,
+        "steps": 4
+      },
+      "timeout": 600000
+    },
+    {
+      "name": "custom_negative_prompt",
+      "input": {
+        "prompt": "Character doing cartwheels with fluid motion",
+        "image_url": "https://github.com/runpod-workers/sample-inputs/blob/main/images/yoga.jpg",
+        "negative_prompt": "static, blurry, distorted, deformed",
+        "cfg": 1.0,
+        "width": 512,
+        "height": 512,
+        "frames": 49,
+        "fps": 16,
+        "steps": 4
+      },
+      "timeout": 300000
+    }
+  ],
+  "config": {
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "gpuCount": 1,
+    "cudaVersion": ["12.1", "12.2", "12.4", "12.6", "12.8"]
+  }
+}

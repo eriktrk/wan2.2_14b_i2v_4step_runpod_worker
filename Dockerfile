@@ -21,39 +21,8 @@ WORKDIR /ComfyUI
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git . && \
     pip install --no-cache-dir -r requirements.txt
 
-# Download models directly into ComfyUI model directories
-RUN mkdir -p /ComfyUI/models/diffusion_models && \
-    mkdir -p /ComfyUI/models/loras && \
-    mkdir -p /ComfyUI/models/text_encoders && \
-    mkdir -p /ComfyUI/models/vae
-
-# Download diffusion models (~14GB each)
-RUN wget -q --show-progress \
-    "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors" \
-    -O /ComfyUI/models/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors
-
-RUN wget -q --show-progress \
-    "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors" \
-    -O /ComfyUI/models/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors
-
-# Download LoRA models
-RUN wget -q --show-progress \
-    "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors" \
-    -O /ComfyUI/models/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
-
-RUN wget -q --show-progress \
-    "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors" \
-    -O /ComfyUI/models/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors
-
-# Download text encoder
-RUN wget -q --show-progress \
-    "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors" \
-    -O /ComfyUI/models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors
-
-# Download VAE
-RUN wget -q --show-progress \
-    "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors" \
-    -O /ComfyUI/models/vae/wan_2.1_vae.safetensors
+# Create model directories for network volume symlinks
+RUN mkdir -p /ComfyUI/models
 
 # Set up worker application
 WORKDIR /app
@@ -63,8 +32,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
+COPY handler.py .
 COPY src/ ./src/
 COPY workflows/ ./workflows/
+COPY extra_model_paths.yaml /ComfyUI/
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

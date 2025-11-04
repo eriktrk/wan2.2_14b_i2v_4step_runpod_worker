@@ -1,5 +1,8 @@
 # Wan2.2 14B I2V Lightning RunPod Worker
 
+[![RunPod](https://img.shields.io/badge/RunPod-Worker-6E3FF3?logo=serverless&logoColor=white)](https://runpod.io)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A RunPod serverless worker for generating videos from static images using the Wan2.2 14B Image-to-Video Lightning model with 4-step LoRA acceleration.
 
 **Built on the official 2025 ComfyUI Wan2.2 template**: This worker is based on the [default ComfyUI workflow](https://docs.comfy.org/tutorials/video/wan/wan2_2) and optimized for serverless deployment.
@@ -21,9 +24,10 @@ A RunPod serverless worker for generating videos from static images using the Wa
 - NVIDIA GPU with 24GB+ VRAM (RTX 4090, A40, A100)
 - CUDA 11.8+
 
-### Models
-Models are automatically downloaded during Docker image build (~30GB total) and stored in `/ComfyUI/models/`:
+### Network Volume & Models
+This worker requires a RunPod network volume with models (~30GB total) stored at `/runpod-volume/runpod-slim/ComfyUI/models/`:
 
+**Required Models**:
 - Diffusion models: wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors (~14GB)
 - Diffusion models: wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors (~14GB)
 - LoRA models: wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
@@ -32,6 +36,8 @@ Models are automatically downloaded during Docker image build (~30GB total) and 
 - VAE: wan_2.1_vae.safetensors
 
 **Source**: [Hugging Face - Comfy-Org/Wan_2.2_ComfyUI_Repackaged](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged)
+
+**Note**: Using a network volume significantly reduces Docker image size and cold start times.
 
 ## API Reference
 
@@ -97,21 +103,57 @@ Models are automatically downloaded during Docker image build (~30GB total) and 
 
 ## Deployment
 
-### 1. Build Docker Image
+### 1. Prepare Network Volume
 
-**Note**: Building will download ~30GB of models. Ensure sufficient bandwidth and disk space.
+First, create a RunPod network volume and download the required models:
+
+```bash
+# Create a network volume in RunPod Console (e.g., 50GB)
+# Then launch a temporary Pod with the volume attached and run:
+
+cd /runpod-volume
+mkdir -p runpod-slim/ComfyUI/models/{diffusion_models,loras,text_encoders,vae}
+
+# Download models (use the provided script or manually)
+cd runpod-slim/ComfyUI/models
+
+# Diffusion models (~14GB each)
+wget "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors" \
+  -O diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors
+
+wget "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors" \
+  -O diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors
+
+# LoRA models
+wget "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors" \
+  -O loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
+
+wget "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors" \
+  -O loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors
+
+# Text encoder
+wget "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors" \
+  -O text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors
+
+# VAE
+wget "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors" \
+  -O vae/wan_2.1_vae.safetensors
+```
+
+### 2. Build Docker Image
 
 ```bash
 docker build --platform linux/amd64 -t your-dockerhub/wan22-i2v-worker:latest .
 docker push your-dockerhub/wan22-i2v-worker:latest
 ```
 
-### 2. Create Serverless Endpoint
+### 3. Create Serverless Endpoint
 
 **RunPod Console Settings:**
 - **Container Image**: `your-dockerhub/wan22-i2v-worker:latest`
 - **GPU Type**: RTX 4090 / A40 / A100 (24GB+ VRAM)
-- **Container Disk**: 50GB minimum (to accommodate ~30GB models)
+- **Container Disk**: 10GB (models are on network volume)
+- **Network Volume**: Attach your volume with models
 - **Environment Variables**:
   - `COMFYUI_SERVER=127.0.0.1:8188`
 
@@ -120,7 +162,7 @@ docker push your-dockerhub/wan22-i2v-worker:latest
 - Idle Timeout: 60 seconds
 - Execution Timeout: 600 seconds
 
-### 3. Test Endpoint
+### 4. Test Endpoint
 
 ```bash
 curl -X POST https://api.runpod.ai/v2/{endpoint_id}/run \
