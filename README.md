@@ -1,5 +1,6 @@
 # Wan2.2 14B I2V Lightning RunPod Worker
 
+[![Runpod](https://api.runpod.io/badge/eriktrk/wan2.2_14b_i2v_4step_runpod_worker)](https://console.runpod.io/hub/eriktrk/wan2.2_14b_i2v_4step_runpod_worker)
 [![RunPod](https://img.shields.io/badge/RunPod-Worker-6E3FF3?logo=serverless&logoColor=white)](https://runpod.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
