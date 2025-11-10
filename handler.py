@@ -133,4 +133,4 @@ if __name__ == "__main__":
     print("Starting Wan2.2 I2V Lightning RunPod Worker...")
     print(f"ComfyUI Server: {os.getenv('COMFYUI_SERVER', '127.0.0.1:8188')}")
 
-    runpod.serverless.start({"handler": handler})
+    runpod.serverless.start(handler)
