@@ -7,8 +7,6 @@ A RunPod serverless worker for generating videos from static images using the Wa
 
 **Built on the official 2025 ComfyUI Wan2.2 template**: This worker is based on the [default ComfyUI workflow](https://docs.comfy.org/tutorials/video/wan/wan2_2) and optimized for serverless deployment.
 
-**For game development**: Suitable for animating 2D game characters, sprites, assets, and UI elements with smooth, natural motion.
-
 ## Features
 
 - **Fast Generation**: 4-step Lightning LoRA for ~90% faster inference (~30-40s for 512x512x33)
@@ -16,7 +14,6 @@ A RunPod serverless worker for generating videos from static images using the Wa
 - **Base64 Output**: Returns generated videos as Base64-encoded strings
 - **Self-Contained**: Models baked into Docker image, no external volumes required
 - **Production Ready**: Full error handling, validation, and logging
-- **Game Asset Animation**: Specialized for 2D character idle animations, attack animations, and sprite sheets
 
 ## Requirements
 
@@ -170,8 +167,8 @@ curl -X POST https://api.runpod.ai/v2/{endpoint_id}/run \
   -H "Content-Type: application/json" \
   -d '{
     "input": {
-      "prompt": "A character smoothly shifting weight in an idle stance",
-      "image_url": "https://example.com/character.png",
+      "prompt": "A person walking forward with natural motion",
+      "image_url": "https://example.com/image.png",
       "width": 512,
       "height": 512,
       "frames": 33,
@@ -285,17 +282,17 @@ MIT License - See LICENSE file for details
 ## Use Cases
 
 This worker excels at:
-- **2D Game Character Animation**: Idle states, breathing animations, stance shifts
-- **Sprite Sheet Animation**: Convert static sprites into dynamic animated sequences
-- **UI Element Animation**: Animate buttons, icons, and menu elements
-- **Asset Variation**: Generate multiple animation variations from single reference images
-- **Concept Previewing**: Quick previews of how static game assets will look in motion
+- **Static Image Animation**: Bring still images to life with natural motion
+- **Content Creation**: Generate video variations from single reference images
+- **Concept Previewing**: Quick previews of how static images will look in motion
+- **Creative Projects**: Add motion to illustrations, artwork, and photographs
+- **Video Generation**: Convert image assets into short video clips
 
-**Example Prompts for Game Assets:**
-- *"Character smoothly shifts weight from one foot to the other in a combat-ready idle stance"*
-- *"Gentle breathing animation with slight shoulder movement, maintaining alert posture"*
-- *"Subtle weapon sway while character remains stationary in guard position"*
-- *"Soft fabric and hair movement from ambient wind, character standing still"*
+**Example Prompts:**
+- *"A person walking forward with smooth, natural steps"*
+- *"Gentle swaying motion from a light breeze, subtle movement"*
+- *"Flowing fabric and hair movement in the wind"*
+- *"Natural breathing and slight body movement while standing"*
 
 ## Credits
 
